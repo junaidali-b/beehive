@@ -1,0 +1,630 @@
+---
+title: "Machine Learning to Predict Queen Bee Acceptance & Presence"
+author: "Junaidali Barodawala"
+editor: visual
+format: 
+ pdf:
+  theme: paper
+  toc: true
+  number-sections: true
+  geometry:
+   - top=30mm
+   - left=15mm
+   - right = 15mm
+   - heightrounded
+---
+
+```{r Conda_Environment, warning=FALSE, message=FALSE, echo=FALSE}
+
+#Initial syntax to activate and use a specific conda environment
+#in Quarto
+
+library(reticulate)
+use_condaenv("C:/Users/Junaid Barodawala/.conda/envs/spyder")
+
+library(knitr)
+```
+
+```{python Libraries, echo=FALSE, message=FALSE, message=FALSE}
+
+#Basic libraries
+import pandas as pd #For dataframe related operations
+import os #For interacting with the operating system
+
+#libraries for visualisation
+from plotnine import * #For creating plots with ggplot
+import matplotlib.pyplot as plt #For creating plots
+import matplotlib.image as mpimg #For images
+
+#Machine Learning
+
+from sklearn.metrics import classification_report #For machine learning model classification reports
+from sklearn.model_selection import train_test_split #For creating training and testing datasets
+from sklearn.pipeline import make_pipeline #For using simple imputer with random forest model
+from sklearn.impute import SimpleImputer #For imputing missing values
+from sklearn.ensemble import RandomForestClassifier #For random forest
+from sklearn import metrics #For model diagnostics
+import xgboost as xgb #For Gradient Boosting
+```
+
+```{python Data_Restore, echo=FALSE, message=FALSE, warning=FALSE}
+
+#Suppressing all messages and errors from tensor flow
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+#Loading environment and data from pickle file
+backup = pd.read_pickle("D:/Python/Spyder/Honey Bee/Backups/beehive.pkl")
+
+for var_name, var_data in backup.items():
+    globals()[var_name] = var_data
+
+#Deleting temporary variables that are not required    
+del var_name
+del var_data
+```
+
+\newpage
+
+# Introduction
+
+Honey bees are extremely important to the environment and serve a role in nature for facilitating pollination among plants. An example of the scale of use of honey bees can be found in California, USA. The almond orchards in California house about 1.6 million colonies of commercial honey bees, and provide for about 80% of the world's almonds (Chalmers A., 2022) . Another example can be found in the UK, around 70 types of crops depend on the pollination provided by bees. The possible cost for manually pollinating crops in the absence of honey bees can also be very high, for example, the cost that could be incurred due to this in the UK, is estimated to be 1.8 billion Great British Pounds per annum (Varela C., 2023). In addition, bees are also responsible for pollinating crops consumed by livestock, and for pollinating other trees and plants which in turn support other insect, birds, mammals and the rest of the food chain (Varela C., 2023). In other words, they are are highly beneficial for the ecosystem as a whole. While foraging, they also create honey and royal jelly, which are valuable sources of nutrition to humans.
+
+The queen bee can get rejected when the worker bees are unable to recognise the pheromones emitted by the queen bee. When these pheromones are identified by the worker bees to be foreign, the queen bee is treated like an intruder in the hive (Foster S., 2023). This is known as the rejection of the queen bee, and it may force the beehive into instability. The worker bees start taking correctional measures to bring the hive into stability, starting with killing the queen bee. Later, the hive is left without a queen, and the eggs within the hive are left unfertilised, only resulting in the birth of worker bees. for context, a queen bee can only be born when the egg is fertilised and the bee is specially nourished using royal jelly, which helps the queen bee get fully developed reproductive organs (Foster S., 2023). These worker bees cannot survive without the queen bee, and this eventually leads to the destruction of the hive. The queen bee's rejection in the hive may require the bee keepers to introduce a new queen into the hive (Foster S., 2023).
+
+While there have been numerous studies on the behaviour of queen bees and honey bees, there is a lack of studies where the ambient weather within the beehive and the external weather and season have been studied for their effects on queen bee acceptance. In addition, there are studies where machine learning and statistical approaches have been used for modelling and predicting events such as swarming and for detecting the presence of the queen bee within the hive, however, these methods have not been used for predicting queen bee acceptance and queen bee presence in conjunction. The literature review expands on some of this existing research material. This study would aim to explore if the audio recordings of beehives and the weather conditions around the hive, have any effect on the queen bee's acceptance, and her presence in the hive. This project also aims to identify models that may provide accurate predictions for queen bee status (a metric combines queen bee acceptance with her presence in the hive) using the described data, and open the possibilities for using such models to help farmers and bee keepers judge if the queen bee would be accepted or rejected.
+
+\newpage
+
+# Literature Review
+
+## Objective
+
+As discussed in the previous section, honey bees are very significant for the ecosystem, as they serve as agents for pollination. There is extensive research conducted in the field of honey bees, and this section aims to explore it. The domain information has been primarily be sourced from research papers as well as reputed organisations that deal with preservation and beehives. Throughout this section, there would be an overarching aim to relate information from existing research to this study, while critically analysing each mentioned paper.
+
+There have been several studies that have contributed in understanding the queen bee's behaviour, and the sound it makes. However, up to the date of conducting this research, no published works addressing the rejection of the queen bee could be found. It is to be noted that only the most relevant research papers have been mentioned in this review and other papers with very similar approaches may exist. They haven't been covered to avoid redundancy. The section covers the works which have focussed on similar concepts and used some form of machine learning method to address them. Consequently, these papers have not been reviewed for their direct relevance to the research question, that is, the acceptance or rejection of the queen bee, but instead have been studied to find relevant approaches used to cover similar topics. In particular, the machine learning algorithms used by will be reviewed in detail. Results and methods used shall be compared between papers, and any possible inconsistencies shall be investigated.
+
+## Existing Works
+
+The audio signals from the beehive have been shown to help in predicting events that would occur in the near future, such as swarming of the bee hive (Terenzi. A, 2020). Swarming of the bees can be described as the queen bee taking roughly half of the bees from the hive, leaving the rest at the hive, in order to relocate and form a hive somewhere else. This has been highlighted in a research paper written by Terenzi. A (2020), named 'On the Importance of the Sound Emitted by Honey Bee Hives'. The paper also highlights academic studies conducted on similar topics, which include the analysis of honey bees, and bee hive health, with the use of sound, and data collected using smart sensors. This paper highlights the history of honey bee related research, and documents machine learning methods that have already been implemented. It has compiled many existing works that involve sounds produced by honey bees, diseases related to them such as Colony Collapse Disorder, and its causes. It critically evaluates each of these studies, emphasising on ways by which further studies may be conducted. This paper served as a well compiled source of mentioning other academic works published on honey bee acoustic and statistical data.
+
+One such paper mentioned in Terenzi A's (2020) paper, was authored by Cejrowski T. et al (2018). Cejrowski T. et al (2018) have produced one of them where sound analysis has been used to detect queen bee presence in the hive. They have used machine learning methods such as an SVM classifier, with a non-linear Gaussian kernel, on high dimensional data, and outputs of t-SNE. t-SNE is a machine learning algorithm that helps in visualising high- dimensional data, in 2 to 3 dimensions, hence being a type of dimensionality reduction algorithm. The data was extracted using an Linear Predictive Coding, which aims to compress the original sound signal into a finite vector of elements, which would cost significantly lesser storage space than the original sound. The study was mainly focussed on the event of 'swarming' where the queen bee leaves the hive to make a new one along with a few worker bees, abandoning the old hive. The study proved the proposed support vector machine model to be effective to promote a swarming event, however, it lacked tests with other types of machine learning models, such as Random Forest models, Gradient Boosting algorithms and neural networks such as convolutional neural networks. It would be beneficial to create these models based on audio features, audio signals, or weather data, and compare their effectiveness against the models proposed by Cejrowski T. *et al* (2018). Bee keepers have to currently manually check for any issues that the queen bee might face, and have to manually assess if the queen bee is capable of laying eggs. In the event that the queen bee is rejected, or dead, the worker bees have roughly 40 days to replace a new queen for the hive, or they may perish (Cejrowski T. *et al*, 2018). The bee keeper has to frequently perform checks to detect issues as soon as possible, which may also not be beneficial for the hive (Cejrowski T. *et al*, 2018), in case the queen bee is present. The paper mentions the use of a non- intrusive sensor which may record metrics such as humidity, temperature, as well as the audio clips from the beehive (Cejrowski T. *et al*, 2018). While this sensor exists, it still hasn't been shown to detect events such as the rejection of the queen bee.
+
+A similar sensor and approach were used in the collection of audio data for detecting various events in the beehive by measuring the frequency of the audio in Hertz. This study was conducted by Qandour A. *et. al.* (2013), and was focussed on using acoustic signals to determine the presence of the varroa mite in a bee hive colony. Varroa mite is a pathogen that may infect a bee hive, and has been observed to be one of the primary causes of the Colony Collapse Disorder (CCD). For reference, Colony Collapse Disorder is a condition where the the population of adult worker bees rapidly decline within the hive (Qandour A. *et. al.*, 2013). They used statistical indicators such as peak frequency (amplitude), spectral centroid, bandwidth and root of the audio signals in order to create machine learning models to detect the mite. Principal component analysis was used to compress the predictors, and this was fed into Support Vector Machine and Linear Discriminant Analysis models to perform the classification. The models provided accurate predictions but were shown to be computationally expensive. The paper recommended the usage of more features and data, while paying close attention to memory management while modelling. This paper's primary choice in predictors was purely statistical as the author could have explored the use of visual inputs such as MFCC and spectrograms that may be directly obtained from the audio signals. The advantage of using spectrograms or MFCC is that they capture data from both, the time domain and frequency domain, making these superior candidates for machine learning models. The models displayed a clear separation in clusters, for observations where the hive was infected by the varroa mite, and ones where the hive was healthy. While the models used were shown to be effective for this classification, they heavily relied on PCA, which made them less interpretable. There could also be a better inspection of different machine learning models beyond support vector machines and linear discriminant analysis.
+
+Audio signals collected from similar sensors were also used in machine learning by transforming the audio into spectrograms. As defined by the Pacific Northwest Seismic Network, "A spectrogram is a visual way of representing the signal strength, or "loudness", of a signal over time at various frequencies present in a particular waveform" (Pacific Northwest Seismic Network, 2023). On the other hand, Mel-Frequency Cepstral Coefficients (MFCC) is a set of audio features, that describe the shape of a the spectral envelope. While they are inherently numerical arrays, unlike spectrograms, they too can be plotted in a similar way. Both, spectrograms and MFCCs may be used as ideal inputs for training machine learning algorithms such as convolutional neural networks, that are effective in classifying image data. Spectrograms have been used by Kampelopoulos D. et al (2022) to classify communication in the bee hives. Kampelopoulos D. et al (2022) proposed a method for monitoring beehives using spectral analysis to detect when the queen bee was present or absent within the hive. The two conditions were simulated manually, by placing and removing the queen bee from the hive, to note how the hive responds to it. Machine learning models such as support vector machines and convolutional neural networks were used to classify the data, using spectrograms of the audio recordings as inputs. These models were shown to be effective in classifying the presence or absence of the queen bee. While the target variable in focus in this paper was the presence of the queen bee, the models used in the paper can be tested to classify the acceptance or rejection of the queen bee while she is present in the hive.
+
+These papers do not provide a direct reference for tried and tested methods to classify the acceptance or rejection of the queen bee, however, they do provide valuable insight for the algorithms that have worked on similar data to predict either the presence of the queen bee, or the detection of adverse health conditions in the hive. To summarise, these algorithms include Principal Component Analysis (PCA), Support Vector Machines (SVM), Linear Discriminant Analysis (LDA), and Convolutional Neural Networks (CNN). They have also highlighted the transformation of audio signals into images, that is spectrograms or MFCC and the use of weather based metrics as predictors. Using these methods for guidance, the following sections shall attempt to create and test machine learning models that may predict the acceptance or rejection of the queen bee in conjunction of her presence or absence. Based on the existing research, this study aims to test a few things. Firstly, if the machine learning methods used by other authors are just as effective in predicting the queen bee's status. Secondly, if among the models tested, do the simpler ones (such as support vector machine) hold merit over the more complex ones (such as convolutional neural networks). Lastly, the predictors having the best accuracy in models for predicting queen status, shall be determined.
+
+\newpage
+
+# Methodology
+
+In this section the methods used for conducting the research have been highlighted. This includes the procurement of data, treatment of that data, modelling on that data, and lastly, the analysis and the results of the study. To summarise the process behind this research, first a study on existing research was conducted to get a starting point on for this thesis. A Kaggle based dataset was used for the study of the acceptance of the queen bee in a hive. The data was collected first hand using a smart sensor and by manual observations (Yang A., 2023). This data had been cleaned and modified to make it suitable for machine learning. Two approaches for machine learning have been considered, one being traditional where algorithms such as Uniform Manifold Approximation and Projection (UMAP), Support Vector Machine and Random Forest were used. The second approach involved a deep neural network suitable for classifying image data, known as Convolutional Neural Network. For each algorithm, multiple models were created, each of which used a different subset of the data. The predictors were divided into 2 distinct groups, one based on audio files (audio features) and the other based on weather data. Some models have been directly fed spectrograms into as input data. The performance of each of these models have been compared, for their accuracy, with a special focus on the the class '2' of queen status, which stands for 'Queen Present & Rejected'. In the following subsections, the treatment and storage of data has been discussed in greater detail.
+
+## Treatment of Data
+
+### Data Source
+
+This subsection shall attempt to display and describe the data to be used in the dissertation, and why it was chosen to investigate the topics to be covered within the analysis. A brief introduction of the data source shall be followed with a basic introduction of the data available from the website. Lastly, the benefits of using this data shall be explored, highlighting how it would be beneficial for this use case.
+
+For this dissertation, a dataset that would help in breaking down the factors responsible for honey bee health and hive stability was needed. Sound data from honey beehives were required, in addition to data available in a CSV format, collected from a sensor that recorded metrics such as weather. For this purpose, a dataset available on Kaggle was used. Kaggle is an a website hosting a large collection of datasets as well as syntax for diverse applications, ranging across multiple topics relevant to data science. The dataset contained both, sound clips and other recorded data (Yang A., 2022).
+
+This dataset was the largest available collection of recorder bee hive data available, amounting to 21 gigabytes of data, almost all of which was just sound clips, recorded in the uncompressed audio file format, .wav. The following table gives a closer look at the data available in its rawest form:
+
+```{python Raw_Data_Variables, echo=FALSE, warning=FALSE}
+
+#Creating list of names of original columns to be used as a filter
+
+original_col = [
+  'device', 
+  'hive_number',
+  'date',
+  'hive_temp',
+  'hive_humidity',
+  'hive_pressure',
+  'weather_temp',
+  'wind_speed',
+  'gust_speed',
+  'weatherID',
+  'cloud_coverage',
+  'rain',
+  'lat',
+  'long',
+  'file_name',
+  'queen_presence',
+  'queen_acceptance',
+  'frames',
+  'target',
+  'time',
+  'queen_status']
+
+#Creating a table to display data types of all original columns
+#available as raw downloaded data.
+
+original_col_df = hivedata[original_col].dtypes.reset_index()
+original_col_df.columns = ['Column', 'Data Type']
+original_col_df = pd.DataFrame(original_col_df)
+original_col_df.iloc[:, -1] = original_col_df.iloc[:, -1].astype(str)
+```
+
+```{r Original_Columns_Display, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Printing table for svm diagnostics
+kable(py$original_col_df,
+      caption = "Original Columns and their Datatypes")
+```
+
+In the table above, it can be observed that there are 20 columns available as a part of a CSV, downloadable as raw data from Kaggle, alongside the audio. This facilitates for an analysis of high dimensional data, and has the potential to reveal hidden patterns and trends within it. The aforementioned columns shall now be explored. The descriptions that follow have been derived from both, the documentation of the dataset available on Kaggle (Yang A., 2022), in addition to first-hand inspection of the data.
+
+1.  Device: There were 2 identical sensors used for 5 different beehives, and this column specifies which on of the two was responsible for collecting a particular row of data. As specified on Kaggle (Yang A., 2022), these smart sensors have been placed slightly higher than the hives to be optimal spots to both, capture data, as well as minimise bee interference.
+
+2.  Hive Number: The data has been collected from 5 different hives, and this column specifies the index number of the hive, relevant to each row of the data.
+
+3.  Date: The column specifies the date on which each row of the data was recorded by the smart sensors.
+
+4.  Hive Temp: The temperature within the bee hive and outside of it can be different. This column records the temperature within the beehive.
+
+5.  Hive Humidity: This column contains the measured humidity within the hive, as the name suggests.
+
+6.  Hive Pressure: The air pressure measured by the sensor in the interior of the beehive, is recorded in this column. Once again, this may differ from the atmospheric pressure.
+
+7.  Weather Temp: This column stores the atmospheric temperature for each row. This is one of the few weather related columns which are sourced from OpenWeatherMap, as stated on the Kaggle website at the source of the data (Yang A., 2022).
+
+8.  Wind Speed: The wind speed is a measure of how quickly the wind is moving, measured in (unit), for each date. Similar to the weather temperature, this metric was collected from the OpenWeatherMap API.
+
+9.  Gust Speed: In theory, gust speed is similar to wind speed, with the minor difference that gust speed is purely concerned with sudden bursts of wind. In other words, these are records for a sudden increase in the wind speed. This is also measured in (unit).
+
+10. Weather ID: The weather ID is the API ID used for collecting atmosphere and weather related data for each row. This column holds no significance for the research itself and is only a part of the metadata, that may serve to verify the method of collecting this weather data.
+
+11. Cloud Coverage: This metric is a measurement of the cloud coverage in the sky, as measured by the OpenWeatherMap. It is a reading on how densely the clouds are covering the sky, and blocking direct sunlight, at any given time.
+
+12. Rain: This column stores a measurement of precipitation recorded for each row. There is no precipitation data in the dataset.
+
+13. Lat and Long: These have been recorded in 2 separate columns, however can only be interpreted together. Since the sensors are all located in the same location, there is no variation in this column.
+
+14. File Name: The file name for each row is one of the most important columns in the CSV file. This is because the file names in this column correspond to names of audio files (.wav) recorded by the smart sensors.
+
+15. Queen Presence: This is a binary column where the presence of the queen bee in the hive has been recorded. This column has been manually populated by Yang A. (2022), the creator of this dataset.
+
+    \newpage
+
+    ```{python Exploration_11, echo=FALSE, warning=FALSE, fig.align='centre', fig.cap='Count of observations for Queen Bee Presence by Class. Class 0 indicates absent, and class 1 indicates preseent.'}
+
+    (
+      ggplot(data = hivedata, mapping = aes(x = 'queen_presence')) + 
+      geom_bar() + 
+      scale_x_continuous(breaks=range(0, 2))
+    )
+    ```
+
+    In the plot above, a breakdown of rows containing positive and negative values for queen bee presence can be seen. The plot indicates that the dataset is skewed, and most of the rows have the value '1' (queen bee present). The other class is where the queen bee is absent (class 0).
+
+16. Queen Acceptance: The queen bee at any given time, may be rejected or accepted by the foragers or the worker bees in the hive. This column categorises rows in one of three possible outcomes. One where the queen has been accepted by the other bees, one where the queen has been rejected, and one where the queen is not present in the hive.
+
+    ```{python Exploration_12, echo=FALSE, warning=FALSE, fig.align='centre', fig.cap='Count of observations for Queen Bee Acceptance by Class. Class 2 indicates that the queen is accepted, class 1 indicates that the queen is rejected, and class 0 indicates that the queen is absent from the hive.'}
+
+    (
+      ggplot(data = hivedata, mapping = aes(x = 'queen_acceptance')) + 
+      geom_bar()+ 
+      scale_x_continuous(breaks=range(0, 3))
+    )
+    ```
+
+    The plot above indicates that the dataset is skewed, wherein most rows show that the queen bee is accepted (class 2), followed by class 1, where the queen bee is rejected, and lastly class 0 with the least number of observations, where the queen bee is not present.
+
+17. Frames: The hives have been segmented into frames within a larger bee box. This column stores a count of the number of segments in the bee box. The bee boxes either have 8 or 10 frames each.
+
+18. Target: On Kaggle, the author of the dataframe has described this column as a combination of queen acceptance and queen presence. It is to be noted that the logic behind this categorisation hasn't been explained.
+
+19. Time: This column stores the time in the day, at which the measurements in each row have been recorded.
+
+20. Queen Status: Similar to the column 'Target', this column has been described as a combination of Queen Presence and Queen Acceptance. The following plot exhibits a breakdown of the observation count for each class in the column.
+
+    ```{python Exploration_15, echo=FALSE, warning=FALSE, fig.align='centre', fig.cap='Count of observations for Queen Bee Status by Class. Class 3 indicates that the queen is present and newly accepted, class 2 indicates that the queen is present and rejected, and class 1 indicates that the queen is absent and class 0 indicates that the original queen is presentn '}
+
+    #Plotting Queen Status by Day and Night
+    print(
+    (
+      ggplot(data = hivedata, mapping = aes(x = 'queen_status')) + 
+      geom_bar()
+    ))
+    ```
+
+    This variable shall be used as the target variable in for this entire study, because it covers both, queen bee acceptance, and queen bee presence. In the plot above, it can be observed that the classes 0 (original queen), 1 (queen not present), 2 (queen present and rejected) are all having similar number of observations, however class 3 (queen present and newly accepted) has the highest number of observations, making this an extremely imbalanced dataset for this class.
+
+### Data Wrangling
+
+As discussed in the previous section, the data available in Kaggle contained a CSV file, and 21 gigabytes of audio data in .wav format. In this section, the steps taken to prepare the data for modelling, analysis and visualisation will be discussed below.
+
+#### Audio Files
+
+The audio data was obtained in single large folder, within the original ZIP file containing all data. The objective with the audio folder was to organise the audio into batches, and then use the batches for further processing. The libraries used for audio processing included 'os' used for reading and writing data onto the local machine, 'math' to compute number of batches and pandas. The first custom function was created to compute the number of subfolders needed to store the audio files, taking the maximum number of audio files to be stored into each subfolder as input. The function then used the second input, the location of the main folder, to extract audio files from each batch, and then store them into the empty subfolders. Using this, 48 subfolders were created, with the maximum number of files per batch being 150. These batches would later be needed to further process the data for plotting spectrograms from them, and the size of the batch largely depended on the processing capacity of the comuputer.
+
+The second task was to locate the audio files stored in the subfolders, and store the discovered locations of audio files corresponding to each row in the CSV file. The CSV file was first loaded, and stored as a pandas dataframe. A row in the dataframe known as 'file name' stored the names of audio files associated with each row. From the source (Kaggle), the audio files were obtained in segments for each row, each segment being 60 seconds long. Each row had up to 6 audio file segments in the .wav file format. Keeping this structure in mind, 6 new columns were created in the pandas dataframe, with the names, 'audio_0', 'audio_1', 'audio_2', 'audio_3', 'audio_4' and 'audio_5'.
+
+Since all the audio files were consistently named, a function was defined, taking advantage of it to search through the subfolders created and return the audio segment for each row. The function also searched through the 6 empty columns created in the pandas dataset, and storing the file location of each audio segment to the relevant column. The function worked by taking the text from the 'file name' column as input, and separating the '.raw' file extention from the file name. A loop was set to construct the names of audio file segments, using the nomenclature, since it was used for naming all audio files in the raw data. The loop would then search for each of these constructed names in all 48 subfolders created using 'os.walk' from the 'os' package. If found, the file location would be stored in the relevant column for the relevant row in the the dataset. The audio segment file locations were constructed by concatinating the folder path where the file was found, followed by the audio segment name constructed earlier.
+
+The next task was to combine the audio segments for each row into larger audio files, and store the locations of the same in the a new column named 'audio' (no suffix). A function was defined to use the locations stored in the audio segment columns and sequentially create a larger audio file for each row. A new folder was created manually before applying this function. It is to be noted that not all rows had 6 segments, and had one or more of the audio segment columns empty. Hence the function was set to check if the the audio segment path existed, and it would ignore the NaNs in the empty cells. The function constructed of the file names for the merged audio files and then concatinated it to the base folder inputted for storing the merged audio files. Once the file location was constructed, it would be used to store the merged audio file in that location. A function was created to use the names in the column 'file names' to record the file locations of of the merged audio files for each row.
+
+#### Spectrograms
+
+For applications related to neural networks, especially Convolutional Neural Networks, it was a requisite to use images instead of audio files, or metrics from the pandas dataframe. For this reason, the audio files were converted into spectrograms. A detailed overview and concept behind a spectrogram shall be discussed later in the dissertation, during exploratory analysis, and this section only explains the process of converting audio files into spectrograms. The batches created earlier were limited to 150 audio files per batch to mitigate the load on the computer's RAM. The batch size could vary based on how many files can the computer handle at once.
+
+In order to convert the audio files into spectrograms, firstly, a function was set up, to create 48 empty subfolders, with identical names as their audio subfolder counterparts. The idea was to convert the audio files in each subfolder at a time, thereby processing spectrograms in batches. For audio files in any given subfolder, the spectrograms for those files would be stored in an identically named subfolder for spectrograms, in the main folder for spectrograms.
+
+Before any function could be implemented, a check was performed to determine how many rows lacked audio files completely. Out of a total of 1275 rows, 53 did not have any audio files, and hence they were removed from the main dataset and stored separately in another pandas dataset. This was done in order to prevent NaN related errors during modelling, and considering that these rows comprised of a very small percentage of the total number of rows, it was feasible to completely ignore these rows, without compromising the sanity of the data.
+
+The names of the subfolders created were stored in a variable using 'os.listdir', and a function was created that accepted this variable as input. It is to be noted that the input variable only contained the 'names' or last level paths of the subfolders, and not the complete path. The function used the input to construct the complete path of the subfolders. A loop was constructed next that ran thorugh all files in the subfolder. The 'librosa' library was used next, to load the audio files, and compute the mel spectrograms. The mel spectrograms were used to compute the decibels of the spectrograms. Next, the array for decibels were resized, and normalised, using numpy. Finally, the spectrograms were plotted using the matplotlib library, and coloured as heatmaps. This loop ran for each and every row, saving the spectrograms in 1:1 dimensions. It is to be noted that since these spectrograms were to be used for convolutional neural networks, that perform with a square kernel, all spectrograms were in the 1:1 proportions, and were also unlabelled. Lastly, the function would record the file locations of spectrograms for each row.
+
+This function was executed in in batches of folders, to mitigate performance issues on the computer. The entire data was processed in 2 batches of subfolders. New columns were created in the pandas dataframe, namely 'spec_0', 'spec_1', 'spec_2', 'spec_3', 'spec_4', 'spec_5', similar to the columns for audio file segments discussed in the previous section. The same process was repeated for merged audio files, and the locations of spectrograms for them were to be stored in the column 'spec' (no suffix).
+
+The part part was to create functions that would construct the file paths for spectrograms based on the nomenclature discussed in the previous section, with the difference that the files names from the column 'file name' were modified to have the file extension of .png. The function would then use these constructed paths to search for the file in the subfolders, and if found, would record the complete file paths in the relevant columns.
+
+#### Audio Features
+
+For machine learning applications, it was necessary to extract the audio features of the audio files, as they would facilitate creation of statistical models based on audio signals. The librosa library in python was used to extract these audio features. These features included audio duration in seconds (duration), spectral centroid (spectral_centroid), spectral bandwidth (spectral_bandwidth), spectral contrast (spectral_contrast), spectral rolloff (spectral_rolloff), chroma short term fourier transformation (chroma_stft), chroma constant Q transformation (chroma_cqt), chroma energy normalised statistics (mfcc), mel-frequency cepstral coefficients, root mean squared energy (rmse), zero crossing rate and tempograms. For each of these features, new columns were created in the main dataset named 'hivedata', and the column names for each of them are specified in brackets above. A detailed explanation for each of these audio features will be undertaken in the section 'Exploratory Analysis'.
+
+In order to extract these audio features for the audio files using the file locations stored in each row, a function was defined that first loaded the audio file using the file location taken in as input. Next, using the librosa library, all of these audio features were extracted from the .wav file, and outputted together in a tibble. It is to be noted that the output for some audio features were in an array format, as they were to be interpreted as a function of time, however, the mean of these features was taken in order to get one value per audio feature per row. This was done since most machine learning algorithms do not work with arrays as input values for each row. A separate for loop was set up to run through all rows for the columns storing locations of merged and segmented audio files. This for loop applied the function to the files, and stored the output in separate columns for each audio feature.
+
+Later, to approximate the loudness of each audio file, the librosa library was used. The measurement was computed in decibels, which is a relative measure of loudness in comparison to a base amplitide. To provide a common scale of measurement to compare values across the entire column, a base value of 0.1 was considered for the amplitude. Decibel values were stored in a column called 'decibels' within the dataset. It is to be noted that all audio features were extracted and computed only for the merged audio files, and hence each row only had one value per audio feature. The audio segments were ignored in this case.
+
+#### Date & Time Based Columns
+
+This subsection only discusses some basic data cleaning. To begin, the column 'date' in the raw CSV, was in a character format, and included data for both date and time. This was converted to the format 'datetime object' from the pandas library. Both, date and time can be accessed from that type of data. The behaviour of honey bees can wary greatly based on seasons, and hence, it was necessary to check if the data was seasonal. Hence, using the month within the date column in the dataset, a new column 'season' was created, which categorised all rows into seasons. A nested if loop was created to store the months that fell into each season and then applied to the date column. The seasonal cycle of Los Angeles, California was used as reference for grouping months into one of 4 seasons: Spring, Summer, Autumn and Winter.
+
+Since honey bees may behave differently between day and night as well, another column was created to categorise columns into night and day. The time values of sunrise and sunset for Los Angeles, California were used as reference for this. A nested if function was created similar to categorise rows into day or night, similar to the categorisation for seasons, and the outputs were stored in a column named 'daytime'.
+
+#### Subsets
+
+All the wrangling described in previous subsections was done to organise the data into systematic subsets. These subsets would later be used to create models to access the effectiveness of specific groups of predictors. Each subset used 'queen status' as the target variable. There were 3 basic subsets created in general, one where all the weather based predictors were grouped together (7 predictors), one where all the audio features were grouped together (11 predictors), and one where all the predictors were grouped together (18 predictors). Lastly, a subset of the the main data had all segments of audio .wav files as the predictor, without any other columns accept for the class variable 'queen status', to test if the spectrograms for the segmented audio files allowed a better accuracy rate for the the neural network. This is because convolutional neural networks may sometimes perform better when they have been fed a larger dataset.
+
+#### Backups and Version Control
+
+##### Backups
+
+To prevent any loss of data, or progress, redundancies were put in place, creating backups. This included local backups of data in a two types of archives. Firstly from Spyder, data in the environment was backed up to a '.spydata' file. This file stored all variables, and dataframes that were visible in the variable explorer or environment, however had storage space limitations. This did not include any custom functions defined and and visible in the environment. Secondly, the 'pickle' library was used to create archives with the file format '.pkl'. Similar to the '.spydata' file format, it could store all variables and dataframes defined in the session, with the difference of manually having to specify the variables that were to be backed up. The advantage of a pickle file was that it did not have any space limitation, as observed previously in .spydata files. Since this backup was to be taken frequently, a custom function was defined in a separate python script, which when executed, would make the custom function usable for that session.
+
+##### Version Control
+
+For version control, Github, a client for git, was used, and backups were made by committing changes made to the files and backups in the local git branch. The changes made in the local branch were then pushed to the remote branch, along with suitable comments made to describe the changes made to the files in that commit. For reference, a commit to a git branch, is a declaration of changes made to files, which would be logged into the git branch. A git push is a command which follows a git commit, which actually updates the reviewed changes made in the commit, thereby modifying the files stored in the git branch.
+
+Git had been set to the computer and was operable through its own command line known as Git Bash. Ordinarily, in order to operate a remote branch on Github, there would be a need to enter user credentials, that is the username and password, however, in this case to circumvent the authentication, an SSH key was set up from the computer, which was registered with Github. Once this was set up, the computer was recognised by github and there was no further requirement to authenticate every time new changes were made, making this process more seamless. All syntax used for creating this report was stored in a publicly accessible git repository (link can be found in the appendix).
+
+# Modelling & Results
+
+## Exploratory Analysis
+
+This section discusses initial findings and focusses on exploring the cleaned and wrangled data. The main aim of this section is to draw insights from the data, which may later aid in creating models based on them to try and predict the target variable or dependent variable. As discussed earlier, the target variable in this study will be 'queen status', which combines 'queen acceptance/ rejection and queen presence/ absence
+
+### Traditional Machine Learning Methods
+
+Before diving into more complicated methods of modelling the data, more traditional methods of machine learning shall be used to check if they accurately produce results. Each of these methods shall be briefly introduced, explained, and critically inspected to understand their advantages and disadvantages. It will be taken into special consideration, why a particular method would or wouldn't be suitable to handle said data, in theory.
+
+Following that, each of the methods shall be modelled, tweaked, and statistically probed for their effectiveness in predicting the dependent variable. Further, there would be attempts to optimise each model through their hyperparameters, and different combinations of predictors shall be used, to check which of them provide a better accuracy while predicting. Each of these machine learning methods shall have a training and a testing set, and the latter shall be used to probe the models for their accuracy.
+
+There would be an overarching goal to obtain the best results, using the most parsimonious model possible. While the models will be built to classify all classes of 'queen status', their effectiveness in detecting observations of the class '2' or 'Queen Present and Rejected' will be inspected in greater detail.
+
+#### Clustering
+
+##### Uniform Manifold Approximation and Projection
+
+Uniform manifold approximation and projection (UMAP) is a machine learning algorithm used for dimensionality reduction and it is know. The framework for UMAP is based on Riemannian geometry and algebraic topology (McInnes L *et. al.* , 2020). It is useful for visualisation and is similar to t-SNE, and can be used for non-linear dimensionality reduction. It assumes that the data is uniformly distributed on a Riemannian manifold, the Reimannian metric is universally constant, and the manifold is locally connected (McInnes L *et. al.* , 2020). Like most machine learning algorithms, this method can be used to create a classification model, and it was tested on this honey bee data. The main objective of using this model was to check if the audio recordings form clear clusters and if the data reveals any hidden patterns.
+
+Two variants of this model were used to try and predict acceptance of the queen bee in the hive. The first one reduced all predictors into 2 dimensions, and when plotted, produced a 2D visualisation. The second model was similar to the first one with the exception that the output was 3 dimensional, allowing for a 3 dimensional visualisation. Both these models were built using using spectrograms as inputs. The spectrograms were extracted using the column 'spec' in the main dataset 'hivedata', where the file locations of spectrograms for each row were stored. To prepare the spectrograms for modelling, the spectrograms were flattened and the UMAP model was applied to the flattened spectrograms **which were in the form of arrays.** For the first model the classified data was plotted on a 2 dimensional plane. Similarly, for the second model, the predictions were colour coded and plotted in a 3 dimensional space. The following figure shows the visualised results from the two models.
+
+```{python UMAP_Plots, echo=FALSE, message=FALSE, warning=FALSE, fig.align='centre', fig.cap='2 dimensional (left) and 3 dimensional (right) visualisations from UMAP models using spectrograms as predictors. In the 3D plot, the 4 classes represent the 4 states of the target variable Queen Status, similar to the plot on the right.'}
+
+#Defining image locations for plots
+UMAP_2D = mpimg.imread("D:/Python/Spyder/Honey Bee/Visualisations/2d_umap.png")
+UMAP_3D = mpimg.imread("D:/Python/Spyder/Honey Bee/Visualisations/3d_umap.png")
+
+plt.figure(figsize = (12, 4))
+
+#Part 1- 2D UMAP 
+plt.subplot(1, 2, 1)
+plt.imshow(UMAP_2D)
+plt.axis('off')
+plt.title('2D UMAP')
+
+#Part 2- 3D UMAP 
+plt.subplot(1, 2, 2)
+plt.imshow(UMAP_3D)
+plt.axis('off')
+plt.title('3D UMAP')
+
+plt.tight_layout()
+
+# Show the combined figure
+plt.show();
+```
+
+For both the visualisations above, there are 4 outcome classes related to the queen status:
+
+1.  Yellow represents the new queen that has been introduced and accepted (also mentioned as '0')
+2.  Blue represents the statistically favourable outcome, where the queen is present but has been rejected. (also mentioned as '1')
+3.  Green coloured points indicate audio clips where the queen is absent from the hive. (also mentioned as '2')
+4.  The red coloured points indicate audio clips where the queen is not new, and the hive is normally functioning (also mentioned as '3')
+
+The figure on the left shows the visualisation of results for the 2 dimensional UMAP model. It can be observed that the points with all colours are clustered together and there is no clear separation between the four classes. On the right side, a 2D representation of a 3 dimensional space can be observed. Similar to the 2 dimensional model, no significant separation between the classes can be observed. Some outliers can be observed in both plots, however they do not represent any singular class, making them challenging to interpret.
+
+To statistically diagnose the cluster separation, the Silhouette scores of the models can be used. This score ranges from -1 to +1, where values close to 1 indicate a good separation, while values closer to -1 indicate a poor separation or absence of clusters. For score for the 2 dimensional UMAP model was -0.036, while the score for the 3D UMAP model, the score was 0.037. Both of these scores indicate a poor separation of clusters for spectrograms which was also evident in the plots.
+
+#### Classification
+
+##### Support Vector Machine
+
+A support vector machine is a classical machine learning algorithm for classification of data. It works by using a separating hyperplane, which in other words, can be described as a decision boundary, on either side of which, different classes of the data may reside. This hyperplane can either be linear or non-linear, and is surrounded by a soft margin on either side. The soft margin helps in reducing some error in classification, or in other words, it accounts for the misclassification of data points that may occur on either side of the hyperplane. This allows for the algorithm to allow misclassified points within the soft margin on one side of the plane, to be classified as a point from the other side (Gandhi R, 2018).
+
+The support vector machine algorithm was tested on both, the spectrograms made using the audio files, and the audio features extracted from those files. It has also been tested on weather data obtained from within (ambient) and outside (atmospheric) the hive. The performance of these models have been tested for their accuracy with predicting the labels within each class, especially class '2' of 'queen status', which represents events where the queen bee is present in the hive but has been rejected. Given that a support vector machine may be used with a number of classification kernels, each of them were tried for their accuracy on a subset of the data (subset using audio features as predictors). The following table shows a comparison of accuracy achieved by different kernels in of the SVM model on audio feature data.
+
+```{r SVM_Kernels, echo=FALSE, message=FALSE, warning=FALSE}
+
+#Table for comparison between kernels
+
+kable(py$svm_1_all_acc,
+      caption = "Accuracy of all Support Vector Machine Kernels for Model 1")
+```
+
+It can be observed from the table above that the linear kernel has the best accuracy (0.44) for this data in comparison to other kernels. While this percentage does not indicate good accuracy (roughly about 80%), from the linear kernel, it does suggest that it may be the most suitable out of the available options to build the models. The low accuracy can also be attibuted to weights that have been applied to the classes in the target variable, where the influence of the dominant classes have been penalised, and the observations belonging to minor classes, have a greater effect on the model. It is to be noted that this metric does not resemble the class-wise accuracy of the model, and refers to the overall accuracy of the model. The following table breaks down the model performance by class.
+
+The linear kernel was tested on various subsets of the data, as mentioned earlier. Since the the class '2' or 'queen bee present and rejected' is the desired class, the performance of different models for its prediction has been compared in the table below.
+
+```{r SVM_Model_Comparison, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Printing table for svm diagnostics
+kable(py$svm_metrics,
+      caption = "Comparison of Model performance for Class 'Queen Bee Present & Rejected'")
+```
+
+It can be observed in the table that the while the weather based model has an overall model accuracy (62%) very similar to the saturated model (65%), it also misclassifies all observations of the favoured class '2', despite the presence of weights in the model that account for imbalance in classes. The accuracy of support vector machines created using only audio features (20%), or solely spectrograms created from the audio signals (55%), is very low in comparison to weather based models in the table. This only leaves the model using both, audio and weather data, as a plausible model for queen acceptance. The following table provides a detailed view of this model.
+
+```{python SVM_Plots_Accuracy, echo=FALSE, message=FALSE, warning=FALSE}
+
+#Defining predictors and target variable
+x = hivedata_wea_spec.iloc[:,:-1]
+y = hivedata_wea_spec.iloc[:,-1]
+
+#Splitting the dataset into training and testing sets
+x_train, x_test, y_train, y_test_4 = train_test_split(x,
+                                                      y,
+                                                      test_size=0.2,
+                                                      random_state=110)
+
+#Creating classification report
+svm_report_4 = classification_report(y_test_4, svm_y_pred_4, output_dict=True)
+svm_report_4 = pd.DataFrame(svm_report_4).transpose()
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+kable(round(py$svm_report_4,2),
+      caption = "Classification Report for SVM based on Weather and Audio Features")
+```
+
+The table above shows the precision, recall score, F1 score and the support of all 4 classes. It can be observed that the SVM model has the highest precision (71.51%) for the class '3' (queen present and newly accepted), which has the highest number of observations in the dataset. This is followed by class 0 where the queen is the original queen (60%) and class 2 where the queen is present and has been rejected (53.12%). Class 3 also is the dominant class in the dataset. This suggests that despite the use of weights to manage class imbalances, the support vector machine is still accurate in only 53.12% of the total predictions, making it an unsuitable algorithm for the data.
+
+##### Random Forest
+
+A random forest is a machine learning algorithm, based on the logic of decision trees. It is mainly used for classification of data, and can be very effective on smaller datasets as well. This is because random forests 'bootstrap' data, or simulate smaller datasets to be used as training sets automatically. Another property of this algorithm is that is can work very well with high-dimensional data, or in other words, data with many predictors. Each 'decision tree' within the random forest randomly picks a set number of predictors from the available list, and each of these cast 'votes' for each row, classifying the data independently. The votes are then counted and each data point gets sent to the class with the majority of votes garnered for it. It is because of this mechanism, that the number of trees always needs to be odd, so that one tree can always act like the 'tie breaker'.
+
+This algorithm may possibly be helpful for classifying the honey bee data, considering that there are many predictors at play, and the influence of each of them on the queen bee acceptance is still not definitive. Upon fitting this algorithm, a metric can be computed for each predictor, to check their significance in correctly classifying data. This would provide some clues to check which predictor may be more relevant than the others, with respect to this study.
+
+```{r RF_Model_Diagnostics, echo=FALSE, message=FALSE, warning=FALSE}
+
+#Printing table for rf diagnostics
+kable(py$rf_metrics,
+      caption = "Comparison of all Random Forest Models for the class 'Queen Bee Present & Rejected'")
+```
+
+The table above shows 3 metrics for all four random forest models considered, that is, precision, recall and F1 score for the favourable class '2' or where the queen bee is present and rejected by the hive. The precision score of the ratio of true positives to the sum of true and false positives for a given class (Yellowbrick, 2023). In other words, it is the ratio of the number of true positives that were correctly predicted out of all predicted positives. The recall score is the ratio of true positives to the sum of true positives and false negatives (Yellowbrick, 2023). In other words, it is the sum of true positives to the total number of positives actually present in the dataset. Lastly, the F1 score is a harmonic mean between the precision and recall scores, and it ranges from 0 to 1 (Yellowbrick, 2023). In the table, it can be observed that the random forest model based on weather related metrics with 50 estimators (Weather- RF_50), has the highest precision score for the favourable class (0.87). It has also outperformed the other models in terms of Recall (0.67), and F1 Score (0.76). To assess the significance of metrics considered within this model, their Feature Importance Score has been reviewed in the following table.
+
+```{r RF_Feature_Importance, echo=FALSE, message=FALSE, warning=FALSE}
+
+#Feature importance for weather based Random Forest Model
+
+kable(py$rf_feat_imp,
+      caption = "Feature Importance for Random Forest Model Based on Weather")
+```
+
+The table above suggests that the hive pressure, or the ambient pressure within the hive was more influential in the classification for this random forest model, having the highest feature importance score (0.24). While this may not be conclusive evidence of the hive pressure being linked to the acceptance of the queen bee by the worker bees, it may suggest that it may have some effect on the behaviour of the worker bees.
+
+##### Gradient Boosting
+
+Gradient boosting is a machine learning algorithm that consecutively fits increasingly accurate models to the dataset, thereby providing a higher accuracy for the response variable, with every iteration of the model. The basic idea behind this algorithm is to create new base learners such as decision trees, and make each one of them more accurate than the last one. A loss function such as the root mean squared error is used to check the accuracy of the model, and the goal of the algorithm is to minimise this function. The model is based on both, audio features and weather related columns. The following table has been used to assess the accuracy of the model.
+
+```{python XGB_Model_Diagnostics_1, echo=FALSE, message=FALSE, warning=FALSE}
+
+#Displaying Classification Report for Audio Features & Weather based model
+print(xgb_report)
+```
+
+In the table above, it can be observed in the table above that the the Gradient Boosting Model performs well in all 3 metrics: precision, recall and F1 score, for all 3 classes. Despite an imbalance in the dataset, with most rows belonging to the class '3' (Queen Present and Newly Accepted), the model has a precision score of 0.87 and a recall score of 0.84 for the favourable class '2' (Queen Present and Rejected). While this model is extremely accurate with a weighted average overall accuracy of 0.91, it is still one of the most complicated models involving all audio features and weather based metrics, making it a computationally expensive and challenging to interpret. Two other models were built using the gradient boosting algorithm, one using just the audio features and one considering all weather related columns. There following table exhibits their accuracy based metrics in comparison with the the first model used, which included all features.
+
+```{r XGB_Model_Diagnostics_2, echo=FALSE, message=FALSE, warning=FALSE}
+
+#Comparison of larger model with all features with Audio and Weather based models
+kable(py$xgb_metrics,
+      caption = "Comparison of all Gradient Boosting Models for the class 'Queen Bee Present & Rejected'")
+```
+
+In the table above, the precision score, the recall score and the F1 metric of the three comparable gradient boosting models are enlisted. It can be observed that the precision score, recall scores and F1 scores of the first model based on all predictors, and the third model based on weather are very similar. There are 7 weather related metrics in all and there are 11 audio features in the dataset. Since the weather based model predicts the favourable class 'Queen Present and Rejected' almost as good as the larger model (with precision: 0.8, recall: 0.82 and F1 score: 0.81) while also having 11 predictors lesser, it can be concluded that the weather based model is computationally cheaper and the better model of the two. The second model in the table using audio features as predictors does not perform as accurately, with the lowest precision score (0.67), recall score (0.57) and F1 score (0.62). To understand the individual influence of each predictor in the model, the following table containing their importance scores has been used.
+
+```{r XGB_Model_Diagnostics, echo=FALSE, message=FALSE, warning=FALSE}
+
+#Table for feature importance of in weather based model
+kable(py$xgb_3_feat_imp,
+      caption = "Feature Importance for Gradient Boosting Model Based on Weather")
+```
+
+Similar to the best random forest model, the table for the best gradient boosting above suggests that hive pressure may have significant influence on the acceptance of the queen bee. In this case, the feature importance score of hive pressure in the model is 0.2, which is the highest among all other predictors in the model.
+
+### Convolutional Neural Network
+
+In contrast to traditional machine learning methods, neural networks work differently, often aiming to mimic a human brain. These are comprised of interconnected nodes or neurons, that individually perform specific functions to process data and send to the next node. The whole network is usually divided into layers comprising of these nodes, namely, the input layer, the hidden layers where the data is processed, and the output later. This section will aim to explore some relevant machine learning methods that may help in predicting queen bee acceptance, based on audio signals. Each model will be tested with its variants, comparing each variant for its accuracy, keeping computational cost and over-fitting in mind.
+
+A convolutional neural network (CNN), is a type of deep neural network that works best on data having a 'grid-like' structure, or a matrix (Mishra M, 2020). It can hence be very effective on images used as input data. Images can be converted into grids of numbers, where the numbers represent the brightness of each pixel. The computation of a CNN involves the use of a 'kernel', which is usually a square area that that 'scans' through the entire matrix created from the pixels. With each step in the sequential scanning process, the highest value from the square shaped kernel area is used to pass on data to the next later of the neural network. This can be interpreted as a form of dimensionality reduction, as the CNN aims to extract the model important parts of the image to train itself. These layers which condense data from the image into smaller concentrated grids are called convolutional layers, and the layer containing the end product of the convolution is called the 'pooling layer. The grid in the pooling layer is finally flattened as used as input for classification. The output is provided in the 'softmax' part of the algorithm (Mishra M., 2020).
+
+There were two models created, one using spectrograms of segments of audio clips, and one using spectrograms of merged audio clips. The difference between the inputs was in the quantity of training data, in terms of rows. While both of them were essentially trained using the same amount of audio, the one using the segments was expected to perform better after to fitting the models. The following were the results of both models in terms of accuracy related metrics.
+
+```{python, warning=FALSE, message=FALSE, echo=FALSE}
+#Manually typed table because of an unknown error while rendering. 
+#Values taken manually from actual diagnostic table
+
+cnn_metrics_custom = pd.DataFrame({'Metric': ['precision', 'recall', 'f1-score', 'support'], 
+  'Segmented Audio': [0.25, 0.13, 0.17, 311], 'Merged Audio': [0.20, 1.00, 0.33, 49]})
+```
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+
+#Manually typed table because of an unknown error while rendering. 
+#Values taken manually from actual diagnostic table
+kable(py$cnn_metrics_custom,
+      caption = "Comparison of CNN Models for the class 'Queen Bee Present & Rejected'")
+```
+
+The table above, is built to only show metrics related to class 2 (queen bee rejected while present). These outcomes are from the two models mentioned earlier, both shown in the columns 'segmented audio' and 'merged audio'. In both of these models, weights were applied to class 2, to control for the class imbalance in the datasets. The classes had identical strengths in both classes, given that the dataset with segmented audio clips was a melted version of the original dataset. Despite adding these weights, it can be observed that all classes, including class 2 have been misclassified to an extent. The following plots are confusion matrices that provides a detailed breakdown of the predictions made by both models.
+
+```{python, warning=FALSE, message=FALSE, echo=FALSE, fig.align='centre', fig.cap='Confusion matrices for Convoluional Neural Network. The plot on the left is for Model 1, which has used spectrograms from 1 minute audio segments, and the plot on the right is based on Model 2, which has used spectrograms transformed from merged audio clips, each spanning for 5 to 6 minutes.'}
+
+#Defining image locations for plots
+conf_1 = mpimg.imread("D:/Python/Spyder/Honey Bee/Visualisations/cnn_confusion_1.png")
+conf_2 = mpimg.imread("D:/Python/Spyder/Honey Bee/Visualisations/cnn_confusion_2.png")
+
+plt.figure(figsize = (12, 4))
+
+#Part 1- Confusion Matrix for Model 1
+plt.subplot(1, 2, 1)
+plt.imshow(conf_1)
+plt.axis('off')
+#plt.title('2D UMAP')
+
+#Part 1- Confusion Matrix for Model 2
+plt.subplot(1, 2, 2)
+plt.imshow(conf_2)
+plt.axis('off')
+#plt.title('3D UMAP')
+
+plt.tight_layout()
+
+# Show the combined figure
+plt.show()
+```
+
+In the plot above, it can be observed that for both models, class 3's predictions were the most accurate. That is because the target variable had imbalanced classes, and despite implementing weights to the classes, the imbalance sustained. There might be a few reasons for this apart from class imbalances, such as the data not being large enough for the model to train well to classify minor classes correctly. A melted dataset where segmented audio files were used, was created to increase the number of observations for each class (7100 rows), as compared to the original dataset (1222 rows). There may be a possibility that a convolutional neural network may need more data to produce accurate predictions, or spectrograms created from finer segments of the audio signals.
+
+### Modelling Summary
+
+In this section, all the models created will be compared for their accuracy. The the aim of this subsection will be to arrive at the most suitable model for predicting the acceptance of the queen bee in the hive. Since one groups of models follow a traditional machine learning approach and the other one uses neural networks, the models will also be compared for their effectiveness against each other. The following table provides a summary of all models along with their overall accuracy.
+
+```{python, warning=FALSE, message=FALSE, echo=FALSE}
+
+#Summary of all models created
+
+model_types = ['UMAP', 'UMAP', 'SVM', 'SVM', 'SVM', 
+  'SVM', 'RF', 'RF', 'RF', 'RF', 'XGB', 'XGB', 'XGB', 'CNN', 'CNN']
+  
+model_variants = ['2D', '3D', 'Audio Feat', 'Spec', 'Weather', 'Weather & Audio', 'Audio- 20', 'Audio- 50', 'Weather- 20', 'Weather- 50', 'Weather & Audio', 'Audio Feat', 'Weather', 'Segmented Spec', 'Merged Spec']
+
+all_acc = ['-',
+  '-',
+  round(svm_1_lin_acc, 2), 
+  round(svm_2_acc, 2), 
+  round(svm_3_acc, 2),
+  round(svm_4_acc, 2),
+  round(rf_au_20_acc, 2),
+  round(rf_au_50_acc, 2),
+  round(rf_wea_20_acc, 2),
+  round(rf_wea_50_acc, 2),
+  round(xgb_acc_1, 2),
+  round(xgb_acc_2, 2),
+  round(xgb_acc_3, 2),
+  round(cnn_acc_1, 2),
+  round(0.2, 2)]
+
+model_sum = pd.DataFrame({
+  'Type': model_types,
+  'Variant': model_variants,
+  #'Advantages': pros,
+  #'Disadvantages': cons,
+  'Accuracy': all_acc
+})
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+#Printing model summary table
+kable(py$model_sum,
+      caption = "Comparison of All Machine Learning Models Based on Accuracy")
+```
+
+In the table above, all types of models that have been created have been listed along with their variants, and their overall accuracy for predicting queen bee status. The first group of models were UMAP models and their sole purpose was to check if the algorithm's dimensionality reduction can cause the 4 classes to form clusters. Both variants of the model, the 2 dimensional and 3 dimensional ones were unable create clearly separated clusters. The second group of models are support vector machines, and best performing ones were based on weather data (0.62) and and a mixture of weather and audio data (0.65). While support vector machines are one of the simpler algorithms from the ones that were tested, they may still not be the most suitable algorithms for this data, given their low accuracy. To overcome the lack of accuracy in the first two types of algorithms, random forest models were created. While using weights to manage class imbalances, random forest models worked better in general as compared to support vector machines. Models using audio signals and weather based predictors both, provided a higher accuracy with the cost of using more estimators, that is, decision trees. The model (Audio- 50) with 76% accuracy provided the best performance from this algorithm, however could be considered computationally expensive. Gradient boosting models were created, considering that the predictors had very weak correlations with the target variable, and the random forests could be considered relatively weak as well. The gradient boosting models provided the best accuracy among all tried models (92%) and lastly convolutional neural networks were unable to perform well, considering that the audio clips were not segmented into small enough fragments. In other words, they may need more data to train. These results suggest that the gradient boosting models may be be the best performing models for this dataset.
+
+\newpage
+
+# Conclusion
+
+The aim of this study was to search for a machine learning method that could contribute in predicting the queen bee status, that is the queen bee's acceptance in conjunction with her presence in the hive. In particular, the condition where the queen is present in the hive but has been rejected by the worker bees (class 2 of queen status) was to be studied more closely. The choice of machine learning algorithms was to influenced based on existing works on honey bee data. These models were to be created while considering predictors such as atmospheric weather conditions, hive's ambient weather, audio signals recorded within the hive, and audio features and spectrograms derived from those audio signals. Out of models that showed greater accuracy, any specific contributions that stood out from any particular variable were to be identified. Any specific type of predictors that generally had greater success in predicting queen bee status were also to be identified. The proposed models were to be evaluated for their accuracy and for their computational cost.
+
+While reviewing the literature, each paper considered had some existing methods implemented for modelling events in the beehive. In the research paper by Cejrowski T. et al (2018), a support vector machine model was used along with t-SNE for dimensionality reduction, while the data from the audio signals was extracted using Linear Predictive coding (LPC). In this study, SVMs were directly implemented on high dimensional data based on weather, audio features and spectrograms derived from audio signals and lastly a superset of audio features and weather data. The drawback behind the method used by Cejrowski T. et al (2018) was that the dimensionality reduction caused the model to be challenging to interpret. In this study, while the model had better interpretability with predictors directly applied to the model, they failed to predict queen acceptance and presence accurately, where the best performing model, based on weather and audio features only had a 65% overall accuracy. When compared, the poor performance may also be attributed to a difference in the target variable (queen presence vs queen status), method of input (t-SNE and high-dimentional data vs directly inputted predictors), and a difference in data.
+
+The next research paper was presented by Qandour A. et. al. (2013), where audio features such as spectral centroid and spectral bandwidth were used to predict the presence of the varroa mite in the hive. Similar to Cejrowski T.'s (2018) study, principal component analysis (PCA) was used for dimensionality reduction and this was used as imput for SVM and LDA algorithms. Along with the loss of interpretability, the the study also did not consider using spectrograms or MFCC as inputs to feed the audio signals directly into the model. This was tested in this study to classify the presence and acceptance of the queen bee in the hive. While the model proposed by Qandour A. et. al. (2013) was harder to interpret, it exhibited a better accuracy for classification as compared to this study (Qandour A. et. al., 2013). The model proposed by Qandour A. et. al. (2013) was able to clearly separate the clusters for healthy and unhealthy hives owing to better classification. In this study, UMAP algorithm was used to attempt to classify the spectrograms, however a clear separation could not be achieved.
+
+Kampelopoulos D. et al (2022) used spectrograms and mel- frequency ceptral coefficients to predict queen bee presence using support vector machines and convolutional neural networks. While these models worked well in their study to predict the acceptance of queen bees, the same models could not produce similar results for this study, in predicting queen bee status. A possible reason for that may be the data that had been used that differs from this study's dataset, in terms of volume, class strengths, etc.
+
+In this study, support vector machines, UMAP, and convolutional neural networks were unable to produce accurate classifications, however, the random forest model and gradient boosting models were able to classify data correctly. In particular, the gradient boosting models based on weather and audio features, and the one based on only weather were fairly accurate classifiers. These models were not used in any of the research papers mentioned above. While they may be considered just as computationally expensive as compared to SVM or PCA or LDA, they were still light-weight as compared to convolutional neural networks. An added advantage of gradient boosting models was that they exhibited a high accuracy despite class imbalances. Therefore the gradient boosting algorithm may be considered a plausible alternative to classify queen bee status.
+
+An advantage of the models proposed in this study is that the predictors used in these models did not undergo any dimensionality reduction, and hence the results were interpretable. In the random forest model with 50 estimators, where weather metrics were used as predictors, the 'hive pressure' had the highest importance score. Upon checking the importance scores of the gradient boosting model using both, weather and audio features, hive pressure had the highest importance scores. This suggests that hive pressure may have a relationship with queen status.
+
+## Limitations and Further Study
+
+This study was conducted while considering a few constraints that may limit the generalisation of the study.
+
+1.  The target variable 'queen status' within the dataset was highly unbalanced. While weights were used to adjust the influence of the majority class on the models, it only served to minimise the bias in the models. In further studies, the same models and diagnosis can be repeated, with a larger and more balanced dataset.
+2.  The convolutional neural networks were trained using limited number of observations, and their accuracy might improve if presented with a more finely segmented audio clips. The current study considered audio segments spanning 60 seconds, and merged audio clips which spanned across 5 to 6 minutes per observation.
+3.  The results presented in the study may not be applicable for the entire year as the data only contained data from the months of **June, July and August,** which can be categorised as summer months for California.
+4.  The behaviour of honey bees may vary between night and day, and while a column was computed within this dataset, it hasn't been fully explored yet, mainly owing to the fact that it is a function of time and doesn't fall under audio features or weather categories. Further research may benefit from taking time of the day into consideration while modelling.
+5.  There were about 5 beehives featured in this dataset. Since they all fall in the same location, it has been assumed that they all behave the same way, and it has also been assumed that the species of the bees in these 5 hives are identical.
+6.  Since the audio signals were captured using a smart sensor that was placed just above the beehive (Yang A., 2022), it has been assumed that the audio does not contain any noise. The audio was directly assumed to be ready for analysis. Future works may reattempt these methods while also accounting for noise, if any.
+7.  Upon manually inspecting a sample of a few audio files from the data, it was observed that the audio frequency and timbre did not change throughout audio, hence it has been assumed that the values of audio features remain constant throughout the length of the audio clip. Therefore, the arithmetic means of these features were used in the models instead of an array of numbers, where each array represented the values of the audio feature at different points in time thoroughout the length.
+
+This study opens possibilities for futures studies as well as practical implementations of the models. In particular, the more accurate models built in this study, namely the Random Forest model based on weather with 50 estimators (RF Weather- 50), and the gradient boosting models based on weather data and the one based on all audio features may be used to build an automated notification system that could be integrated with bee keepers' phones. The model may be integrated into a smart sensor, which could then detect unfavourable events in real time, in the hive (Class 1 where the queen is absent, or class 2 of queen status). The sensor could proceed in sending a notification to alert the bee keeper to take relevant action. While smart sensors that record data already exist, adding an application to them may help in protecting honey bees better, not just in California, but also all around the globe.
+
+# Bibliography
+
+1.  Chalmers A. (2022) *California's almond trees rely on honey bees and wild pollinators, but a lack of good habitat is making their job harder.* \[online\] Available at: <https://journalism.berkeley.edu/projects/californias-almond-trees/> \[Accessed at: 10 August, 2023\]
+
+2.  Varela C. (2023) *Why are bees important? And how can you help them* \[online\] Available at: <https://www.woodlandtrust.org.uk/blog/2023/04/why-are-bees-important/> \[Accessed at: 10 August, 2023\]
+
+3.  Foster S. (2023) *What Happens When Bees Reject The Queen? Complete Answer* \[online\] Available at: <https://schoolofbees.com/what-happens-when-bees-reject-the-queen-complete-answer/> \[Accessed at: 10 August, 2023\]
+
+4.  Terenzi A., Cecchi S. and Spinsante S. (2020) On the Importance of the Sound Emitted by Honey
+
+    Bee Hives, *MDPI.* Available at: <https://pubmed.ncbi.nlm.nih.gov/33142815/> \[Accessed at: 5 August, 2023\]
+
+5.  Cejrowski T., Szymański J, Mora H. and Gil D. (2018) Detection of the Bee Queen Presence
+
+    using Sound Analysis. Available at: <https://link.springer.com/chapter/10.1007/978-3-319-75420-8_28> \[Accessed at: 10 August, 2023\]
+
+6.  Qandour A., Ahmad I., Habibi D. and Leppard M. (2013) Remote beehive monitoring using acoustic signals. Available at: <https://ro.ecu.edu.au/cgi/viewcontent.cgi?article=1505&context=ecuworkspost2013> \[Accessed at: 10 August, 2023\]
+
+7.  Kampelopoulos D., Sofianidis I., Tananaki C., Tsiapali K., Nikolaidis S. and Siozios K. (2022). Analyzing the Beehive's Sound to Monitor the Presence of the Queen Bee. Available at: <https://www.pacet-conf.gr/Files/PACET2022paper6941.pdf> \[Accessed at: 10 August, 2023\]
+
+8.  Pacific Northwest Seismic Network (2023). *What is a Spectrogram?* \[online\]. Available at: <https://pnsn.org/spectrograms/what-is-a-spectrogram> \[Accessed at: 10 August, 2023\]
+
+9.  Yang A. (2023) *Smart Bee Colony Monitor: Clips of Beehive Sounds* \[online\]. Available at: <https://www.kaggle.com/datasets/annajyang/beehive-sounds/discussion/397608> \[Accessed at: 10 August, 2023\]
+
+10. Yang A. (2022) *Smart Bee Colony Monitor: Clips of Beehive Sounds.* Available at: <https://www.kaggle.com/datasets/annajyang/beehive-sounds> \[Accessed at: 10 August, 2023\]
+
+11. McInnes L., Healy J. and Melville J. (2020) UMAP: Uniform Manifold Approximation and Projection for Dimension Reduction, *arXiv.* Available at: <https://arxiv.org/abs/1802.03426>. \[Accessed at: 10 August, 2023\]
+
+12. Gandhi R. (2018). *Support Vector Machine --- Introduction to Machine Learning Algorithms* \[online\]. Available at: <https://towardsdatascience.com/support-vector-machine-introduction-to-machine-learning-algorithms-934a444fca47> \[Accessed at: 10 August, 2023\]
+
+13. Yellowbrick (2023) *Classification Report* \[online\]. Available at: <https://www.scikit-yb.org/en/latest/api/classifier/classification_report.html> \[Accessed at: 10 August, 2023\]
+
+14. Mishra M. (2020) *Convolutional Neural Networks, Explained* \[online\]. Avaiable at: <https://towardsdatascience.com/convolutional-neural-networks-explained-9cc5188c4939> \[Accessed at: 10 August, 2023\]
+
+\newpage
+
+# Appendix
+
+All syntax related to this thesis can be found on:
+
+<https://github.com/junaidali-b/beehive>
