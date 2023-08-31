@@ -39,11 +39,11 @@ Required Data: https://www.kaggle.com/datasets/annajyang/beehive-sounds
 
 #Syntax to install libraries using conda command line
 1. conda activate spyder
-2. conda install -c conda-forge <package>
+2. conda install -c conda-forge package
 
 Alternatively syntaxes that may be entered after activating conda environment:
-1. conda install <package>
-2. pip install <packages>
+1. conda install package
+2. pip install package
 
 #Commands to start Spyder using specific enviroment (to be inputted within Anaconda command line)
 1. conda activate spyder #This activates the environment named Spyder
