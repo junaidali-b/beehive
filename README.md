@@ -66,4 +66,7 @@ Alternatively syntaxes that may be entered after activating conda environment:
 1. reticlulate (EXTREMELY IMPORTANT TO RUN PYTHON SYNTAX IN R)
 2. knitr
 
+#Syntax to install libraries in R Studio
+1. install.packages("package")
+
 #In each of the scripts, file locations have been set based on how the files have been stored in my PC, however, there may be a case wise need to edit the file locations as needed. They may differ in every computer, and hence, it is important to check and edit the locations referenced in each script as required.
