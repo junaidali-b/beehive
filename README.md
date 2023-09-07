@@ -15,7 +15,10 @@
 4. R Studio: https://posit.co/download/rstudio-desktop/
 5. Anaconda: https://www.anaconda.com/download
 
-Required Data: https://www.kaggle.com/datasets/annajyang/beehive-sounds
+Required Data: 
+1. Raw Data: https://www.kaggle.com/datasets/annajyang/beehive-sounds
+2. Pickle Backup (Cleaned Data, Variables and Subsets): https://drive.google.com/file/d/10JJwmoGKbkbUr4fg0QgiFRmRsgPDP82h/view?usp=drive_link
+(Please note that it is important to load this Pickle file into Python and R, to execute any kind of code apart from the initial data wrangling. The Pickle file is to be loaded at at the beginning of all scripts to avoid any errors.)
 
 #Construction of conda environment:
 1. A conda environment is to be created by the name of 'spyder' and is to be set up in the working directory of the spyder IDE
